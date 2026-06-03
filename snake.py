@@ -84,7 +84,7 @@ def create_gui():
     restart_btn = tk.Button(
         button_frame,
         text="Restart",
-        # command=restart_game,
+        command=restart_game,
         font=("Arial", 12, "bold"),
         bg="#ecf0f1",  # Light gray background
         fg="#2c3e50",  # Dark text for better visibility
@@ -99,7 +99,7 @@ def create_gui():
     pause_btn = tk.Button(
         button_frame,
         text="Pause/Resume",
-        # command=toggle_pause,
+        command=toggle_pause,
         font=("Arial", 12, "bold"),
         bg="#ecf0f1",  # Light gray background
         fg="#2c3e50",  # Dark text for better visibility
@@ -254,6 +254,22 @@ def draw_snake_head(x, y, direction):
     canvas.create_oval(eye_x1 - eye_size, eye_y1 - eye_size, eye_x1 + eye_size, eye_y1 + eye_size, fill="black")
     canvas.create_oval(eye_x2 - eye_size, eye_y2 - eye_size, eye_x2 + eye_size, eye_y2 + eye_size, fill="black")
 
+def restart_game():
+    """Restart game"""
+    global paused
+    init_game()
+    paused = False
+    draw_game()
+    game_loop()
+
+def toggle_pause():
+    """Toggle pause/resume"""
+    global paused
+    if not game_over:
+        paused = not paused
+        if not paused:
+            game_loop()
+
 def draw_snake_body(x, y):
     """Draw snake body (green rounded rectangle)"""
     x1 = x * CELL_SIZE + 2
@@ -282,6 +298,68 @@ def draw_snake_tail(x, y):
         width=2
     )
 
+def game_loop():
+    """Main game loop"""
+    global current_speed, game_over
+
+    move_snake()
+
+    draw_game()
+    
+    if not game_over:
+        root.after(current_speed, game_loop)  # Use dynamic speed
+    else:
+        messagebox.showinfo(
+            "Game Over",
+            f"Game Over!\nFinal Score: {score}\n\nClick 'Restart' to start a new game"
+        )
+
+def move_snake():
+    """Move snake"""
+    global snake, direction, next_direction, food_pos, score, game_over, current_speed
+    
+    if game_over or paused:
+        return
+    
+    # Update direction
+    direction = next_direction
+    
+    # Calculate new head position
+    head_x, head_y = snake[0]
+    dx, dy = direction
+    new_head = (head_x + dx, head_y + dy)
+    
+    # Check collision
+    if check_collision(new_head[0], new_head[1]):
+        game_over = True
+        return
+    
+def check_collision(head_x, head_y):
+    """Check collision"""
+    global snake
+    
+    # Check boundaries
+    if head_x < 0 or head_x >= GRID_SIZE or head_y < 0 or head_y >= GRID_SIZE:
+        return True
+    
+    # Check if hit itself
+    if (head_x, head_y) in snake[1:]:
+        return True
+    
+    return False
+    
+    # Add new head
+    snake.insert(0, new_head)
+    
+    # Check if food (apple) is eaten
+    if new_head == food_pos:
+        score += 1  # Score increases by 1 for each apple
+        food_pos = generate_food_position()  # Generate new random apple position
+        # Increase speed (decrease delay) each time food is eaten
+        current_speed = max(MIN_GAME_SPEED, current_speed - SPEED_DECREASE)
+    else:
+        # Remove tail if food not eaten
+        snake.pop()
 
 # main routine
 def main():
@@ -291,6 +369,7 @@ def main():
     init_game()
     draw_game()
 
+    game_loop()
     root.mainloop()
 
 
